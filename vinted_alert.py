@@ -1,7 +1,6 @@
 import requests
 import os
 import re
-import json
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
@@ -19,32 +18,30 @@ matches = re.findall(r'\/items\/([^\"]+)', html)
 
 items = list(dict.fromkeys(matches))
 
-STATE_FILE = "seen.json"
+LATEST = items[0] if items else None
 
-seen = []
+LAST_FILE = "last_item.txt"
 
-if os.path.exists(STATE_FILE):
-    with open(STATE_FILE, "r") as f:
-        seen = json.load(f)
+previous = None
 
-new_seen = items[:20]
+if os.path.exists(LAST_FILE):
+    with open(LAST_FILE, "r") as f:
+        previous = f.read().strip()
 
-for item in items[:20]:
+if LATEST and LATEST != previous:
 
-    if item not in seen:
+    msg = f"""🚨 NOVO ITEM — Vinted
 
-        msg = f"""🚨 NOVO ITEM — Vinted
-
-https://www.vinted.pt/items/{item}
+https://www.vinted.pt/items/{LATEST}
 """
 
-        requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            data={
-                "chat_id": CHAT_ID,
-                "text": msg
-            }
-        )
+    requests.post(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        data={
+            "chat_id": CHAT_ID,
+            "text": msg
+        }
+    )
 
-with open(STATE_FILE, "w") as f:
-    json.dump(new_seen, f)
+with open(LAST_FILE, "w") as f:
+    f.write(LATEST or "")
