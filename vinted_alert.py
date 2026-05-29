@@ -1,8 +1,9 @@
 import requests
-import json
 import os
+import json
+import re
 
-URL = "https://www.vinted.pt/catalog?catalog[]=11&brand_ids[]=671&brand_ids[]=15430438&brand_ids[]=377&brand_ids[]=3573&brand_ids[]=1745&brand_ids[]=7011975&brand_ids[]=2113&brand_ids[]=14217&brand_ids[]=567&brand_ids[]=4559&brand_ids[]=83122&brand_ids[]=10613&order=newest_first&page=1"
+URL = "https://www.vinted.pt/catalog?catalog[]=11&brand_ids[]=377&brand_ids[]=567&brand_ids[]=671&brand_ids[]=1745&brand_ids[]=2113&brand_ids[]=3573&brand_ids[]=4559&brand_ids[]=10613&brand_ids[]=14217&brand_ids[]=83122&brand_ids[]=7011975&brand_ids[]=15430438&brand_ids[]=51445&brand_ids[]=56974&brand_ids[]=200474&brand_ids[]=72138&order=newest_first&currency=EUR&page=1"
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
@@ -14,26 +15,44 @@ headers = {
 r = requests.get(URL, headers=headers)
 html = r.text
 
-latest = html[:5000]
+matches = re.findall(
+    r'"title":"(.*?)".*?"price_numeric":"(.*?)".*?"url":"(.*?)"',
+    html
+)
 
-STATE_FILE = "last.txt"
+STATE_FILE = "seen.json"
 
-old = ""
+seen = []
+
 if os.path.exists(STATE_FILE):
     with open(STATE_FILE, "r") as f:
-        old = f.read()
+        seen = json.load(f)
 
-if latest != old:
+new_seen = []
 
-    message = "🚨 Novo item possível na sua busca Vinted!\n\n" + URL
+for title, price, link in matches[:10]:
 
-    requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        data={
-            "chat_id": CHAT_ID,
-            "text": message
-        }
-    )
+    uid = link
+    new_seen.append(uid)
 
-    with open(STATE_FILE, "w") as f:
-        f.write(latest)
+    if uid not in seen:
+
+        msg = f"""🚨 NOVO ITEM — Vinted
+
+{title}
+
+€{price}
+
+https://www.vinted.pt{link}
+"""
+
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            data={
+                "chat_id": CHAT_ID,
+                "text": msg
+            }
+        )
+
+with open(STATE_FILE, "w") as f:
+    json.dump(new_seen, f)
