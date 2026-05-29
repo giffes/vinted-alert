@@ -1,6 +1,7 @@
 import requests
 import os
 import re
+import json
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
@@ -16,23 +17,23 @@ html = r.text
 
 matches = re.findall(r'\/items\/([^\"]+)', html)
 
-items = list(dict.fromkeys(matches))
+items = list(dict.fromkeys(matches))[:20]
 
-LATEST = items[0] if items else None
+STATE_FILE = "seen.json"
 
-LAST_FILE = "last_item.txt"
+previous = []
 
-previous = None
+if os.path.exists(STATE_FILE):
+    with open(STATE_FILE, "r") as f:
+        previous = json.load(f)
 
-if os.path.exists(LAST_FILE):
-    with open(LAST_FILE, "r") as f:
-        previous = f.read().strip()
+new_items = [i for i in items if i not in previous]
 
-if LATEST and LATEST != previous:
+for item in reversed(new_items):
 
     msg = f"""🚨 NOVO ITEM — Vinted
 
-https://www.vinted.pt/items/{LATEST}
+https://www.vinted.pt/items/{item}
 """
 
     requests.post(
@@ -43,5 +44,5 @@ https://www.vinted.pt/items/{LATEST}
         }
     )
 
-with open(LAST_FILE, "w") as f:
-    f.write(LATEST or "")
+with open(STATE_FILE, "w") as f:
+    json.dump(items, f)
