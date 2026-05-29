@@ -1,6 +1,7 @@
 import requests
 import os
 import re
+import json
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
@@ -12,25 +13,38 @@ headers = {
 }
 
 r = requests.get(URL, headers=headers)
-
 html = r.text
 
-matches = re.findall(
-    r'\/items\/([^\"]+)',
-    html
-)
+matches = re.findall(r'\/items\/([^\"]+)', html)
 
-unique = list(dict.fromkeys(matches))
+items = list(dict.fromkeys(matches))
 
-msg = "🚨 LINKS ENCONTRADOS\n\n"
+STATE_FILE = "seen.json"
 
-for item in unique[:10]:
-    msg += f"https://www.vinted.pt/items/{item}\n\n"
+seen = []
 
-requests.post(
-    f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-    data={
-        "chat_id": CHAT_ID,
-        "text": msg[:4000]
-    }
-)
+if os.path.exists(STATE_FILE):
+    with open(STATE_FILE, "r") as f:
+        seen = json.load(f)
+
+new_seen = items[:20]
+
+for item in items[:20]:
+
+    if item not in seen:
+
+        msg = f"""🚨 NOVO ITEM — Vinted
+
+https://www.vinted.pt/items/{item}
+"""
+
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            data={
+                "chat_id": CHAT_ID,
+                "text": msg
+            }
+        )
+
+with open(STATE_FILE, "w") as f:
+    json.dump(new_seen, f)
