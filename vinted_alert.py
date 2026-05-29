@@ -2,6 +2,9 @@ import requests
 import os
 import re
 import json
+from datetime import datetime
+
+print("RUN:", datetime.utcnow())
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
