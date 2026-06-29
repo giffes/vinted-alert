@@ -29,6 +29,12 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python vinted_alert.py
+     
+- name: Run Enjoei
+  env:
+    BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+    CHAT_ID: ${{ secrets.CHAT_ID }}
+  run: python enjoei_alert.py
 
       - name: Persist state
         run: |
