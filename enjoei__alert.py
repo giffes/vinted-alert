@@ -6,18 +6,17 @@ CHAT_ID = os.environ["CHAT_ID"]
 
 url = "https://enjusearch.enjoei.com.br/graphql"
 
-r = requests.get(url)
+r = requests.post(
+    url,
+    json={}
+)
 
 msg = f"""
 STATUS: {r.status_code}
 
-HEADERS:
-
-{dict(r.headers)}
-
 BODY:
 
-{r.text[:1000]}
+{r.text[:2000]}
 """
 
 requests.post(
