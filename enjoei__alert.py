@@ -1,5 +1,6 @@
 import requests
 import os
+import re
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
@@ -14,19 +15,36 @@ r = requests.get(URL, headers=headers)
 
 html = r.text
 
-msg = f"""ENJOEI HTML
+checks = {
+    "product": html.lower().count("product"),
+    "offer": html.lower().count("offer"),
+    "price": html.lower().count("price"),
+    "graphql": html.lower().count("graphql"),
+    "__next": html.lower().count("__next"),
+    "itemprop": html.lower().count("itemprop"),
+}
+
+msg = f"""
+ENJOEI CHECK
 
 status: {r.status_code}
 
-first 2000 chars:
+{checks}
 
-{html[:2000]}
+graphql positions:
+{html.lower().find('graphql')}
+
+__next positions:
+{html.lower().find('__next')}
+
+itemprop positions:
+{html.lower().find('itemprop')}
 """
 
 requests.post(
     f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
     data={
         "chat_id": CHAT_ID,
-        "text": msg[:4000]
+        "text": msg
     }
 )
