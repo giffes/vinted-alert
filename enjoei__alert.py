@@ -9,18 +9,18 @@ url = "https://assets.enjoei.com.br/assets/packs/js/web/products/index-61390ecbf
 
 text = requests.get(url).text
 
-matches = re.findall(
-    r'graphql|operationName|query|search|products',
-    text,
-    re.IGNORECASE
-)
+results = []
 
-msg = f"""
-JS SIZE: {len(text)}
+for word in ["graphql", "Search", "query", "products"]:
+    for m in re.finditer(word, text, re.IGNORECASE):
+        start = max(0, m.start() - 120)
+        end = min(len(text), m.end() + 200)
+        snippet = text[start:end]
+        results.append(
+            f"\n=== {word} ===\n{snippet}\n"
+        )
 
-MATCHES:
-{matches[:50]}
-"""
+msg = "\n".join(results[:10])
 
 requests.post(
     f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
