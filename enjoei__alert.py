@@ -15,13 +15,23 @@ r = requests.get(URL, headers=headers)
 
 html = r.text
 
-matches = re.findall(r'enjoei\.com\.br/p/[^"\']+', html)
+patterns = [
+    r'/p/[^"\']+',
+    r'"url":"[^"]+"',
+    r'"price":[^,]+',
+    r'"name":"[^"]+"',
+    r'product[^<]{0,200}',
+]
 
-msg = f"""
-LINKS ENCONTRADOS
+results = []
 
-{matches[:20]}
-"""
+for pattern in patterns:
+    matches = re.findall(pattern, html, re.IGNORECASE)
+    results.append(
+        f"\nPATTERN:\n{pattern}\nFOUND: {len(matches)}\n\n{matches[:5]}"
+    )
+
+msg = "\n\n".join(results)
 
 requests.post(
     f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
