@@ -13,13 +13,12 @@ headers = {
 
 html = requests.get(URL, headers=headers).text
 
-matches = re.findall(r'enjusearch[^"]+', html)
+matches = re.findall(r'https://[^"\']+', html)
 
-msg = f"""
-GRAPHQL MATCHES
+msg = "LINKS ENCONTRADOS\n\n"
 
-{matches[:20]}
-"""
+for link in matches[:50]:
+    msg += link + "\n"
 
 requests.post(
     f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
