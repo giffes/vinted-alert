@@ -5,20 +5,22 @@ import re
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
-URL = "https://www.enjoei.com.br/dior/s?q=dior&lp=24h&sr=same_country"
+url = "https://assets.enjoei.com.br/assets/packs/js/web/products/index-61390ecbf0f2350f332d.js"
 
-headers = {
-    "User-Agent": "Mozilla/5.0"
-}
+text = requests.get(url).text
 
-html = requests.get(URL, headers=headers).text
+matches = re.findall(
+    r'graphql|operationName|query|search|products',
+    text,
+    re.IGNORECASE
+)
 
-matches = re.findall(r'https://[^"\']+', html)
+msg = f"""
+JS SIZE: {len(text)}
 
-msg = "LINKS ENCONTRADOS\n\n"
-
-for link in matches[:50]:
-    msg += link + "\n"
+MATCHES:
+{matches[:50]}
+"""
 
 requests.post(
     f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
