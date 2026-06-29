@@ -1,6 +1,5 @@
 import requests
 import os
-import re
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
@@ -15,18 +14,13 @@ r = requests.get(URL, headers=headers)
 
 html = r.text
 
-ids = re.findall(r'/p/.*?-(\d+)', html)
-
-msg = f"""
-ENJOEI DEBUG
+msg = f"""ENJOEI HTML
 
 status: {r.status_code}
 
-ids found: {len(ids)}
+first 2000 chars:
 
-first ids:
-
-{ids[:10]}
+{html[:2000]}
 """
 
 requests.post(
