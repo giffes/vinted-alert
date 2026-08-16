@@ -1,0 +1,118 @@
+import json
+import os
+import uuid
+import requests
+from datetime import datetime, timezone, timedelta
+
+URL = "https://enjusearch.enjoei.com.br/graphql-search-x"
+
+BOT_TOKEN = os.environ["BOT_TOKEN"]
+CHAT_ID = os.environ["CHAT_ID"]
+
+SEEN_FILE = "enjoei_test_seen.json"
+
+# Termo de busca (ajuste aqui ou transforme em env var depois)
+TERM = "dior"
+
+# Fuso de Brasília (-03:00), sem depender de zoneinfo do sistema
+BR_TZ = timezone(timedelta(hours=-3))
+
+
+def build_params():
+    now = datetime.now(BR_TZ).strftime("%Y-%m-%dT%H:%M:%S-03:00")
+    return {
+        "browser_id": str(uuid.uuid4()),
+        "city": "rio-de-janeiro",
+        "experienced_seller": "true",
+        "first": "20",
+        "last_published_at": now,
+        "operation_name": "searchProducts",
+        "query_id": "c5faa5f85fb47bf0beaa97b67d8a9189",
+        "search_context": "products_search",
+        "search_id": str(uuid.uuid4()),
+        "shipping_range": "same_country",
+        "state": "rj",
+        "term": TERM,
+    }
+
+
+HEADERS = {
+    "Accept": "application/json",
+    "User-Agent": "Mozilla/5.0",
+}
+
+
+def load_seen():
+    if not os.path.exists(SEEN_FILE):
+        return set()
+    with open(SEEN_FILE, "r", encoding="utf-8") as f:
+        return set(json.load(f))
+
+
+def save_seen(seen):
+    with open(SEEN_FILE, "w", encoding="utf-8") as f:
+        json.dump(list(seen), f)
+
+
+def send_telegram(text):
+    requests.post(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        data={
+            "chat_id": CHAT_ID,
+            "text": text,
+            "disable_web_page_preview": False,
+        },
+        timeout=30,
+    )
+
+
+def main():
+    response = requests.get(URL, params=build_params(), headers=HEADERS, timeout=30)
+    print("STATUS:", response.status_code)
+    response.raise_for_status()
+
+    data = response.json()
+    products = data["data"]["search"]["products"]
+    edges = products["edges"]
+
+    seen = load_seen()
+    is_first_run = len(seen) == 0
+
+    new_products = []
+    for edge in edges:
+        node = edge["node"]
+        if node["id"] not in seen:
+            new_products.append(node)
+
+    print("TOTAL:", products["total"])
+    print("RECEIVED:", len(edges))
+    print("SEEN (antes):", len(seen))
+    print("NEW:", len(new_products))
+
+    # Bootstrap: na primeira execução só salva o estado, não manda spam
+    if is_first_run:
+        for edge in edges:
+            seen.add(edge["node"]["id"])
+        save_seen(seen)
+        send_telegram(f"✅ Enjoei test bootstrap concluído.\nItens salvos: {len(seen)}")
+        print("Bootstrap completed.")
+        return
+
+    for product in new_products:
+        name = product["title"]["name"]
+        price = product["price"]["current"]
+        path = product["path"]
+        product_url = f"https://www.enjoei.com.br/p/{path}"
+
+        msg = f"🆕 NOVO ENJOEI\n\n{name}\nR$ {price}\n\n{product_url}"
+        send_telegram(msg)
+
+    for edge in edges:
+        seen.add(edge["node"]["id"])
+    save_seen(seen)
+
+    print(f"Enviados ao Telegram: {len(new_products)}")
+
+
+if __name__ == "__main__":
+    main()
