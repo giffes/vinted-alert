@@ -67,13 +67,26 @@ def send_telegram(text):
 
 
 def main():
-    response = requests.get(URL, params=build_params(), headers=HEADERS, timeout=30)
+    params = build_params()
+    response = requests.get(URL, params=params, headers=HEADERS, timeout=30)
     print("STATUS:", response.status_code)
-    response.raise_for_status()
+
+    if response.status_code != 200:
+        send_telegram(
+            f"⚠️ Enjoei test falhou.\nSTATUS: {response.status_code}\n"
+            f"BODY: {response.text[:500]}"
+        )
+        response.raise_for_status()
 
     data = response.json()
+
+    if "errors" in data:
+        send_telegram(f"⚠️ Enjoei API retornou erro:\n{json.dumps(data['errors'])[:800]}")
+        return
+
     products = data["data"]["search"]["products"]
     edges = products["edges"]
+    total = products["total"]
 
     seen = load_seen()
     is_first_run = len(seen) == 0
@@ -84,17 +97,32 @@ def main():
         if node["id"] not in seen:
             new_products.append(node)
 
-    print("TOTAL:", products["total"])
+    print("TOTAL:", total)
     print("RECEIVED:", len(edges))
     print("SEEN (antes):", len(seen))
     print("NEW:", len(new_products))
+
+    # Se a API não devolveu nenhum produto, algo está bloqueando/errado.
+    # Avisa e NÃO salva estado vazio, pra não ficar preso em "bootstrap" pra sempre.
+    if len(edges) == 0:
+        send_telegram(
+            "⚠️ Enjoei test: a API respondeu 200 mas veio sem produtos.\n"
+            f"TOTAL relatado: {total}\n"
+            f"browser_id: {params['browser_id']}\n"
+            f"search_id: {params['search_id']}\n"
+            f"last_published_at: {params['last_published_at']}\n"
+            "Possível bloqueio anti-bot ou parâmetro inválido."
+        )
+        return
 
     # Bootstrap: na primeira execução só salva o estado, não manda spam
     if is_first_run:
         for edge in edges:
             seen.add(edge["node"]["id"])
         save_seen(seen)
-        send_telegram(f"✅ Enjoei test bootstrap concluído.\nItens salvos: {len(seen)}")
+        send_telegram(
+            f"✅ Enjoei test bootstrap concluído.\nTOTAL: {total}\nItens salvos: {len(seen)}"
+        )
         print("Bootstrap completed.")
         return
 
