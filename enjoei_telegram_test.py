@@ -1,5 +1,6 @@
-import json
+limport json
 import os
+import time
 import uuid
 import requests
 from datetime import datetime, timezone, timedelta
@@ -10,6 +11,7 @@ BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 
 SEEN_FILE = "enjoei_test_seen.json"
+BROWSER_ID_FILE = "enjoei_browser_id.txt"
 
 # Termo de busca (ajuste aqui ou transforme em env var depois)
 TERM = "dior"
@@ -18,10 +20,33 @@ TERM = "dior"
 BR_TZ = timezone(timedelta(hours=-3))
 
 
+def epoch_millis():
+    return int(time.time() * 1000)
+
+
+def tagged_id():
+    """Gera um id no MESMO formato usado pelo site: uuid4 + '-' + epoch em ms."""
+    return f"{uuid.uuid4()}-{epoch_millis()}"
+
+
+def get_browser_id():
+    """Um navegador real reusa o mesmo browser_id entre visitas.
+    Persistimos no repo pra parecer o mesmo 'visitante' a cada execução."""
+    if os.path.exists(BROWSER_ID_FILE):
+        with open(BROWSER_ID_FILE, "r", encoding="utf-8") as f:
+            saved = f.read().strip()
+            if saved:
+                return saved
+    new_id = tagged_id()
+    with open(BROWSER_ID_FILE, "w", encoding="utf-8") as f:
+        f.write(new_id)
+    return new_id
+
+
 def build_params():
     now = datetime.now(BR_TZ).strftime("%Y-%m-%dT%H:%M:%S-03:00")
     return {
-        "browser_id": str(uuid.uuid4()),
+        "browser_id": get_browser_id(),
         "city": "rio-de-janeiro",
         "experienced_seller": "true",
         "first": "20",
@@ -29,7 +54,7 @@ def build_params():
         "operation_name": "searchProducts",
         "query_id": "c5faa5f85fb47bf0beaa97b67d8a9189",
         "search_context": "products_search",
-        "search_id": str(uuid.uuid4()),
+        "search_id": tagged_id(),
         "shipping_range": "same_country",
         "state": "rj",
         "term": TERM,
