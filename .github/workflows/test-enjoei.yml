@@ -30,5 +30,6 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add enjoei_test_seen.json || true
+          git add enjoei_browser_id.txt || true
           git diff --staged --quiet || git commit -m "update Enjoei test state"
           git push
